@@ -1,0 +1,215 @@
+<html>
+<head>
+<title>Tae Fabio</title>
+</head>
+
+<body id="body">
+<p id="text"></p>
+<script>
+
+    //creates the vanvas and the audio objects then appends the canvas.
+var body = document.getElementById("body");
+var canvas = document.createElement("canvas");
+body.appendChild(canvas);
+var backgroundMusic = new Audio('SeeYouAgainCaminhoneiro.mp3');
+    //backgroundMusic.play();  //remove or add the comentary to start the song
+
+//Declares a bunch of things, pretty obvious.
+
+var content = canvas.getContext("2d");
+var canvaswidth = 800, canvasheight = 600, frameSwitch = 0, jumpTicks=0, truckXPosition=0,
+truckYPosition=0, aPressed = false,  dPressed = false, vel = -6, firstRoadPosition = -310,
+movingDown= 0, movingUp = 0;
+canvas.width = canvaswidth;
+canvas.height = canvasheight;
+
+    //The idea is: to make sure that every image is only drawn when all are loaded
+    //each one has it's imageloaded variable and when they load it's set to true
+    //the function update checks later to see if they are indeed loaded and then draw
+
+    //sets all imageloaded values to false
+var imageloaded = new Array(5);
+for (var i = 0; i < imageloaded.length; i++)
+{
+    imageloaded[i] = false;
+}
+    
+    //declares the images objects
+var truckSprite = new Image();
+var roadSprite = new Image();
+var jewSprite = new Image();
+var hookerSprite = new Image();
+var copSprite = new Image();
+    //it's sources
+truckSprite.src = "Siga bem Truck Driver2.png";
+roadSprite.src = "Road-2.5-standartSize.png";
+jewSprite.src = "jew.png";
+hookerSprite.src = "Hooker 1.0.png";
+copSprite.src = "PRF.png";
+    //it's onload functions
+truckSprite.onload = (function () {
+        return function(){ imageloaded[0] = true }
+    })();
+roadSprite.onload = (function () {
+        return function(){ imageloaded[1] = true }
+    })();
+jewSprite.onload =(function(){
+        return function(){ imageloaded[2] = true }
+    })();
+hookerSprite.onload = (function () {
+        return function(){ imageloaded[3] = true }
+    })();
+copSprite.onload = (function () {
+        return function(){ imageloaded[4] = true }
+})();
+
+    //--------------------//
+    //WARNING, TEST ZONE, NO LOGIC SEQUENCE OR COMENTARIES TO BE EXPECTED HERE
+function entity(sprite, x , y, width, height)
+{
+    this.sprite = sprite;
+    this.width = width;
+    this.height = height;
+    this.numberOfFrames;
+    this.frame = 0;
+    this.x = x;
+    this.y = y;
+    this.draw = function()
+        {
+        content.drawImage(this.sprite, 0, this.frame * this.height, this.width, this.height, this.x, this.y, this.width, this.height);
+        }
+    };
+var jew = new entity(jewSprite,200,150,64,64);
+var truck = new entity(truckSprite,0,0,320,320);
+    //--------------------//
+
+var text = document.getElementById("text");
+
+    //this function is called by setInterval(update, 33), so it refreshes at 30fps
+    //it does all the necessary parts like input, drawing, collision and animation
+
+var update = function()
+{
+    //this part takes care of the jump animation
+    //jumpticks means the number of frames left for the jumping animation. It's set to 18 when space is pressed
+    //and can only be set to 18 again once it reaches 0. Since the truck is jumps, it's going up and then at half of the jump time it goes down
+    //so for 9 ticks it has a negative velocity (which means he goes up) and after jumpticks == 9 it has a positive velocity
+    //when the jump ends (jumpTicks == 0), the velocity is set negative again.
+
+		if(jumpTicks)
+		{
+			if(jumpTicks == 9)
+			{
+				vel = -vel;
+			}
+			truckYPosition += vel;
+			jumpTicks--;
+			if(jumpTicks ==0) vel = -vel;
+		}
+    //this part checks it all images are loaded, it they are, it draws every sprite where it should be
+			if(imageloaded[0] && imageloaded[1] && imageloaded[2] && imageloaded[3] && imageloaded[4])
+			{
+                //clear the canvas for the frame
+				content.clearRect(0,0,canvaswidth, canvasheight);
+				content.rect(0, 0, canvaswidth, canvasheight);
+                //set the background white
+				content.fillStyle = "white";
+				content.fill();
+                //remove the loading text if images are loaded
+				/////////////////////////////////////////////////text.innerHTML = "";
+			    //more trick part, first there are 4 road sprites drawn, one at (-310,80) one at (10,80), other at (330,80) and one (650,80)
+			    //to give the impression of moviment, each frame each one is draw 10pixel to the left until the first road, the one that started
+                //at -310 reaches 0, so it's set back to -310.
+                var bozubozuporo = 0;
+				for(var i = firstRoadPosition;  i < canvaswidth; i+=320)
+				{
+				    content.drawImage(roadSprite, i, 80);
+				    bozubozuporo++;
+				}
+				text.innerHTML = bozubozuporo;
+				bozubozuporo = 0;
+				if(firstRoadPosition < 0)
+					firstRoadPosition+=10;
+				else
+				    firstRoadPosition = -310;
+                //draw the images
+				jew.draw();
+				jew.x += 10;
+				if (jew.x == canvas.width)
+				    jew.x = 0;
+				content.drawImage(hookerSprite, 150, 150);
+			    //draw the correct frame of the truck and the cop
+
+				content.drawImage(truckSprite, 0, frameSwitch * 320, 320, 320, truckXPosition, truckYPosition, 320, 320);
+				var copsSpriteSize = 192;
+				content.drawImage(copSprite, 0, frameSwitch * copsSpriteSize, copsSpriteSize, copsSpriteSize, 300, 160, copsSpriteSize, copsSpriteSize);
+
+			}
+			else
+			{
+				text.innerHTML = "loading";
+			}
+            //checks if the aPressed was set to true when the key A was pressed and then move the truck to the right
+			if(aPressed)
+			    truckXPosition -= 9;
+            //same idea but for D and it moves left
+			else if (dPressed)
+			    truckXPosition += 9;
+            //checks if the animation movement of going up or down is happening, if it is
+            //moves the truck on the right axis
+			if(movingDown)
+			{
+				truckYPosition+=9;
+				movingDown--;
+			}
+
+			if(movingUp)
+			{
+				truckYPosition-=9;
+				movingUp--;
+			}
+};
+    //check for key events
+
+document.addEventListener("keydown",
+function()
+{
+	if(event.keyCode == 65) //65 for A, 68 for D, 87 for W, 83 for S.
+		aPressed = true;
+	
+	else if(event.keyCode == 68)
+		dPressed = true;
+    //this checking makes sure that you can't start moving up if you're already moving down or the opposite
+    //also forbiddens you from trying to switch lanes while jumping
+
+	if(event.keyCode == 87 && !(movingUp || movingDown) && truckYPosition == 8*9)
+		movingUp = 8;
+
+	else if(event.keyCode == 83 && !(movingUp || movingDown) && truckYPosition == 0)
+		movingDown = 8;
+    //you can't jump if you are switching lanes
+	if(event.keyCode == 32 && !jumpTicks && !(movingUp || movingDown) )
+		jumpTicks = 18;
+	
+});
+
+document.addEventListener("keyup",function(){
+	if(event.keyCode == 65) //65 for A or a on keydown and 68 for D and d.
+		aPressed = false;
+
+	else if(event.keyCode == 68)
+		dPressed = false;
+});
+
+var playThatSongCowboy =  function(){
+	//backgroundMusic.play(); //remove or add comentary if you want or not the song to start playing every 51 seconds(51000 microSeconds)
+}
+ 
+setInterval(update, 33);
+    //switch the frame animation for truck and cops at 5fps (200 microSeconds)
+setInterval(function () { frameSwitch = (frameSwitch + 1) % 2; }, 200);
+    //restart the music when it ends;
+setInterval(playThatSongCowboy, 51000 );
+
+</script>
+</body>

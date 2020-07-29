@@ -1,0 +1,28 @@
+  
+<html>
+<head>
+<title>Tae Fabio</title>
+</head>
+
+<body id="body">
+<p id="text"></p>
+<script>
+   //creates the vanvas and the audio objects then appends the canvas.
+var body = document.getElementById("body");
+var canvas = document.createElement("canvas");
+body.appendChild(canvas);
+
+var canvaswidth = 800, canvasheight = 600;
+setInterval(function(){
+canvas.width = canvaswidth;
+canvas.height = canvasheight;
+var context = canvas.getContext('2d');
+context.fillStyle = "blue";
+context.fill();
+console.log('a');
+}, 0)
+;
+//content.clearRect(0,0,canvaswidth, canvasheight);
+//content.rect(0, 0, canvaswidth, canvasheight);
+</script>
+</body>

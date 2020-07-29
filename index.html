@@ -1,0 +1,464 @@
+<html>
+<head>
+<title>Tae Fabio</title>
+<link rel ="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body id="body">
+<p id="text"></p>
+<p id="titulo">Siga Bem Truck Driver</p>
+<canvas id = "canvas" style></canvas>
+<p id="agradecimentos">Special thanks to my dearest friends: Fabio, Douglas and Mr.D.</p>
+<p id="debug"></p>
+<script>
+
+    //creates the vanvas and the audio objects then appends the canvas.
+var debugText = document.getElementById("debug");
+var body = document.getElementById("body");
+var canvas = document.getElementById("canvas");
+//body.appendChild(canvas);
+var backgroundMusic = new Audio('SeeYouAgainCaminhoneiro.mp3');
+    //backgroundMusic.play();  //remove or add the comentary to start the song
+
+//Declares a bunch of things, pretty obvious.
+
+var content = canvas.getContext("2d");
+var canvaswidth = 800, canvasheight = 400, jumpTicks = 0, aPressed = false, dPressed = false, vel = 8, firstRoadPosition = -310, movingDown = 0, movingUp = 0,
+    numberOfMovingTicks = 8, numberOfJUmpingTicks = 36; 
+canvas.width = canvaswidth;
+canvas.height = canvasheight;
+var frameSwitch = 0; //delete this variable later
+
+    //The idea is: to make sure that every image is only drawn when all are loaded
+    //each one has it's imageloaded variable and when they load it's set to true
+    //the function update checks later to see if they are indeed loaded and then draw
+
+    //sets all imageloaded values to false
+var imageloaded = [];
+for (var i = 0; i < imageloaded.length; i++)
+{
+    imageloaded[i] = false;
+}
+    
+    //declares the images objects
+var truckSprite = new Image();
+var roadSprite = new Image();
+var jewSprite = new Image();
+var hookerSprite = new Image();
+var copSprite = new Image();
+var potholeSprite = new Image();
+    //it's sources
+truckSprite.src = "Siga bem Truck Driver2.png";
+roadSprite.src = "Road-2.5-standartSize.png";
+jewSprite.src = "jew.png";
+hookerSprite.src = "Hooker 1.0.png";
+copSprite.src = "PRF.png";
+potholeSprite.src = "Pothole.png";
+    //it's onload functions
+truckSprite.onload = (function () {
+        return function(){ imageloaded[0] = true }
+    })();
+roadSprite.onload = (function () {
+        return function(){ imageloaded[1] = true }
+    })();
+jewSprite.onload =(function(){
+        return function(){ imageloaded[2] = true }
+    })();
+hookerSprite.onload = (function () {
+        return function(){ imageloaded[3] = true }
+    })();
+copSprite.onload = (function () {
+        return function(){ imageloaded[4] = true }
+})();
+potholeSprite.onload = (function () {
+    return function () { imageloaded[5] = true }
+})();
+
+
+function loadingDock()
+{
+    types = 
+    {
+        cop: 0,
+        pothole: 1,
+        jew: 2,
+        hooker: 3
+    }
+
+    this.object;
+    this.timeBefore = 0;
+    this.timeAfter = 0;
+    this.isLoading = false;
+    this.toLoad = [];
+    this.socae = function (dock, slot) {
+        var aux =Math.floor(Math.random() * 10) ;
+        if (aux >= 0 && aux <= 3) {
+            loadingDocks[dock].toLoad[slot] = types.pothole;
+        }
+        else if (aux >= 4 && aux <= 6) {
+            loadingDocks[dock].toLoad[slot] = types.jew;
+        }
+        else if (aux == 7) {
+            loadingDocks[dock].toLoad[slot] = types.hooker;
+        }
+        else
+            loadingDocks[dock].toLoad[slot] = types.cop;
+    }
+}
+
+function entity(sprite, x, y, width, height)
+{
+    this.sprite = sprite;
+    this.width = width;
+    this.height = height;
+    this.frame = 0;
+    this.x = x;
+    this.y = y;
+    this.lane = 0;
+    //TODO: CHANGE THE NAME FREE TO SOMETHING THAT MAKES SENSE!!!!!!!
+    this.free = false;
+    this.copSmokePixels = 18;
+    //the hitbox must be a little smaller than the actual width of the truck cause of the smoke and transparent spaces and shit
+    //
+    this.draw = function()
+    {
+        content.drawImage(this.sprite, 0, this.frame * this.height, this.width, this.height, this.x, this.y, this.width, this.height);
+    }
+    this.switchFrame = function ()
+    {
+        this.frame = (this.frame + 1) % this.numberOfFrames;
+    }
+    this.move = function()
+    {
+        this.x += vel;
+        if(this.x >= canvas.width)
+        {
+            this.free = false;
+        }
+    }
+    //this functions tests if the object isn't inside the truck, not if the truck isn't inside the object
+    this.collision = function()
+    {
+        // verifica colisão com caminhão
+        if (this.x >= truck.x + 9.92 && this.x <= truck.x + truck.width - 79.92 && this.lane == truck.lane)
+            this.free = false;
+        
+        // se for policial tem que levar em conta a fumaça do sprite na colisão.
+        if (this.x + this.width - this.copSmokePixels >= truck.x + 9.92 && this.x + this.width - this.copSmokePixels <= truck.x + truck.width - 79.92 && this.lane == truck.lane)
+            this.free = false;
+    }
+    this.tick = function()
+    {
+        this.move(); this.collision(); this.draw();
+    }
+};
+
+/**
+ * Isso cria arrays iniciais de cada tipo de entidade, os numeros abaixo são hardcoded para alinhar os pixels
+*/
+var jews = [], cops = [], hookers =[], potholes=[];
+    //upperlane y = 150 (confirmed) bottomlane y= 230(just a guess)
+for(var i = 0; i < 26; i++)
+{
+    jews[i] = new entity(jewSprite, -50, -500, 64, 64); 
+}
+    //upperlane y = 0, bottomlane y = 80;
+for (var i = 0; i < 10; i++)
+{
+    cops[i] = new entity(copSprite, -Math.floor((Math.random() * 192* 12) + 80), 0 , 192, 192);
+    cops[i].copSmokePixels = 24.10;
+    cops[i].numberOfFrames = 2;
+}
+    //upperlane = 170 bottomlane = 250
+for (var i = 0; i < 5; i++) {
+    potholes[i] = new entity(potholeSprite, -50, -500, 64, 64);
+}
+for (var i = 0; i < 26; i++) {
+    hookers[i] = new entity(hookerSprite,-50, -500, 64, 64); 
+}
+
+var truck = new entity(truckSprite, 480, 0, 320, 320);
+    //upperlane = 170 bottomlane = 250
+truck.numberOfFrames = 2;
+var loadingDocks = []; loadingDocks[0] = new loadingDock(); loadingDocks[1] = new loadingDock();
+
+    //prepara os 10 objetos em cada loading dock
+for (var z = 0; z < 2  ; z++) {
+    for (var i = 0; i < 5; i++) {
+        //pode ser qualquer loadingdocks, pq eu nao consegui loadingdock::socae, entao da no mesmo
+        loadingDocks[1].socae(z, i);
+    }
+}
+
+    //--------------------//
+
+var text = document.getElementById("text");
+
+    //this function is called by setInterval(update, 33), so it refreshes at 30fps
+    //it does all the necessary parts like input, drawing, collision and animation
+
+var update = function()
+{
+    //this part takes care of the jump animation
+    //jumpticks means the number of frames left for the jumping animation. It's set to 18 when space is pressed
+    //and can only be set to 18 again once it reaches 0. Since the truck is jumps, it's going up and then at half of the jump time it goes down
+    //so for 9 ticks it has a negative velocity (which means he goes up) and after jumpticks == 9 it has a positive velocity
+    //when the jump ends (jumpTicks == 0), the velocity is set negative again.
+		if(jumpTicks)
+		{
+		    if (jumpTicks > numberOfJUmpingTicks/2)
+		        truck.y -= vel/2;
+		  
+            else
+		        truck.y += vel/2;
+
+			jumpTicks--;
+		}
+    //console.log(truck.x);
+    //this part checks it all images are loaded, it they are, it draws every sprite where it should be
+			if(imageloaded[0] && imageloaded[1] && imageloaded[2] && imageloaded[3] && imageloaded[4])
+			{
+                //clear the canvas for the frame
+				content.clearRect(0,0,canvaswidth, canvasheight);
+                //remove the loading text if images are loaded
+				text.innerHTML = "";
+			    //more trick part, first there are 4 road sprites drawn, one at (-310,80) one at (10,80), other at (330,80) and one (650,80)
+			    //to give the impression of moviment, each frame each one is draw 10pixel to the left until the first road, the one that started
+                //at -310 reaches 0, so it's set back to -310.
+				for(var i = firstRoadPosition;  i < canvaswidth; i+=320)
+				{
+				    content.drawImage(roadSprite, i, 80);
+				}
+				if(firstRoadPosition < 0)
+					firstRoadPosition+=10;
+				else
+				    firstRoadPosition = -310;
+			    //draw the images
+				for (var i = 0; i < hookers.length; i++) {
+				    if (hookers[i].free == true)
+				        hookers[i].tick();
+
+				}
+				for (var i = 0; i < potholes.length; i++) {
+				    if (potholes[i].free == true)
+				        potholes[i].move(); potholes[i].draw();
+
+				}
+				for (var i = 0; i < cops.length; i++)
+				{
+				    if (cops[i].free == true) 
+				        cops[i].tick(); 
+				    
+				}
+				for (var i = 0; i < jews.length; i++) {
+				    if (jews[i].free == true)
+				        jews[i].tick();
+				}
+				discarrego(3);
+				truck.draw();
+
+			}
+			else
+			{
+				text.innerHTML = "loading";
+			}
+            //checks if the aPressed was set to true when the key A was pressed and then move the truck to the right
+			if(aPressed)
+			    truck.x -= vel;
+            //same idea but for D and it moves left
+			else if (dPressed)
+			    truck.x += vel;
+            //checks if the animation movement of going up or down is happening, if it is
+            //moves the truck on the right axis
+			if(movingDown)
+			{
+			    truck.y += vel;
+			    movingDown--;
+			    truck.lane = 1;
+			}
+
+			if(movingUp)
+			{
+			    truck.y -= vel;
+			    truck.lane = 0;
+				movingUp--;
+			}
+
+			if (loadingDocks[0].timeBefore > 0 )//&& loadingDocks[0].isLoading)
+			    loadingDocks[0].timeBefore--;
+			if (loadingDocks[1].timeBefore > 0 )// && loadingDocks[0].isLoading)
+			    loadingDocks[1].timeBefore--;
+};
+    //check for key events
+
+
+document.addEventListener("keydown",
+function()
+{
+	if(event.keyCode == 65) //65 for A, 68 for D, 87 for W, 83 for S.
+		aPressed = true;
+	
+	else if(event.keyCode == 68)
+		dPressed = true;
+    //this checking makes sure that you can't start moving up if you're already moving down or the opposite
+    //also forbiddens you from trying to switch lanes while jumping
+
+	if (event.keyCode == 87 && !(movingUp || movingDown) && truck.y == numberOfMovingTicks * vel)
+	{
+	    movingUp = numberOfMovingTicks;
+	    truck.lane = 0;
+	}
+	else if (event.keyCode == 83 && !(movingUp || movingDown) && truck.y == 0)
+	{
+	    movingDown = numberOfMovingTicks;
+	    truck.lane = 1;
+    }
+    //you can't jump if you are switching lanes
+	if (event.keyCode == 32 && !jumpTicks && !(movingUp || movingDown))
+	{
+	    jumpTicks = numberOfJUmpingTicks;
+	    event.preventDefault();
+	}
+	
+});
+
+document.addEventListener("keyup",function(){
+	if(event.keyCode == 65) //65 for A or a on keydown and 68 for D and d.
+		aPressed = false;
+
+	else if(event.keyCode == 68)
+		dPressed = false;
+});
+var playThatSongCowboy =  function(){
+	//backgroundMusic.play(); //remove or add comentary if you want or not the song to start playing every 51 seconds(51000 microSeconds)
+}
+ 
+setInterval(update, 33); //33);
+    //switch the frame animation for truck and cops at 5fps (200 microSeconds)
+setInterval(function () {
+    truck.switchFrame();
+    for (var i = 0; i < cops.length; i++)
+    {
+        if (cops[i].x >= -cops[i].width)
+            cops[i].switchFrame(); 
+    }
+}, 200);
+    //restart the music when it ends;
+setInterval(playThatSongCowboy, 51000 );
+
+
+//the discarrego function ask for a input, 3 means a random dock will be chosen, 1 and 2 tells what dock to choose.
+var discarrego = function (input) {
+    if (input == 3)
+        var dockChosen = Math.floor(Math.random() * 2);
+    else
+        var dockChosen = input;
+
+    //if one of the docks finishes loading another object will be pushed to it's end.
+    for (var i = 0; i < 2 ; i++) {
+        if (loadingDocks[i].isLoading )
+            if (loadingDocks[i].object.x >= 0 ) {
+                loadingDocks[i].isLoading = false;
+                
+                for (var z = 0; z < loadingDocks[i].toLoad.length-1; z++) {
+                    loadingDocks[i].toLoad[z] = loadingDocks[i].toLoad[z + 1];
+                    loadingDocks[i].socae(i,5);
+                } 
+               
+            }
+        }
+    
+        debugText.innerHTML = "dock 0: " + loadingDocks[0].toLoad[0] + " " + loadingDocks[0].toLoad[1] + " " + 
+        loadingDocks[0].toLoad[2] + " " + loadingDocks[0].toLoad[3] + " " +
+            loadingDocks[0].toLoad[4] + " " +
+            "dock 1: " + loadingDocks[1].toLoad[0] + " " + loadingDocks[1].toLoad[1] + " " + 
+        loadingDocks[1].toLoad[2] + " " + loadingDocks[1].toLoad[3] + " " +
+            loadingDocks[1].toLoad[4] + " <br> timeBefore:" + loadingDocks[0].timeBefore + " " +
+            "timeBefore:" + loadingDocks[1].timeBefore;
+    
+
+    //if the dockchosen is loading or halted the code tries the other, if both are busy, it ends the function.
+    if (loadingDocks[dockChosen].isLoading || loadingDocks[dockChosen].timeBefore != 0) {
+        dockChosen = (dockChosen + 1) % 2;
+        if (loadingDocks[dockChosen].isLoading || loadingDocks[dockChosen].timeBefore != 0) {
+            return;
+        }
+    }
+  
+
+    if (loadingDocks[dockChosen].toLoad[0] == types.jew) {
+        for (var i = 0; i < jews.length; i++) {
+            if (jews[i].free == false) {
+                jews[i].x = -jews[i].width;
+                jews[i].lane = dockChosen;
+                jews[i].y = (jews[i].lane * 80) + 150;
+                jews[i].free = true;
+                loadingDocks[dockChosen].object = jews[i];
+                loadingDocks[dockChosen].isLoading = true;
+                loadingDocks[dockChosen].timeBefore = 8;
+                break;
+            }
+        }
+    }
+    if (loadingDocks[dockChosen].toLoad[0] == types.cop) {
+        for (var i = 0; i < cops.length; i++) {
+            if (cops[i].free == false) {
+                cops[i].x = -cops[i].width;
+                cops[i].lane = dockChosen;
+                cops[i].y = (cops[i].lane +1) *80;
+                cops[i].free = true;
+                loadingDocks[dockChosen].object = cops[i];
+                loadingDocks[dockChosen].isLoading = true;
+                loadingDocks[dockChosen].timeBefore = 40;
+                var otherDock = (dockChosen + 1) % 2;
+                for(var z = 0; z < loadingDocks[otherDock].toLoad.length - 2; z++){
+                	if(loadingDocks[otherDock].toLoad[z] == types.cop){
+                		loadingDocks[otherDock].timeBefore = 60;
+                		loadingDocks[dockChosen].timeBefore = 100;
+                		break;
+                	}
+                }
+                break;
+            }
+        }
+    }
+    if (loadingDocks[dockChosen].toLoad[0] == types.pothole) {
+        for (var i = 0; i < potholes.length; i++) {
+            if (potholes[i].free == false) {
+                potholes[i].x = -potholes[i].width;
+                potholes[i].lane = dockChosen;
+                potholes[i].y = (potholes[i].lane * 80) + 170;
+                potholes[i].free = true;
+                loadingDocks[dockChosen].object = potholes[i];
+                loadingDocks[dockChosen].isLoading = true;
+                loadingDocks[dockChosen].timeBefore = 40;
+                break;
+            }
+        }
+    }
+    if (loadingDocks[dockChosen].toLoad[0] == types.hooker) {
+        for (var i = 0; i < hookers.length; i++) {
+            if (hookers[i].free == false) {
+                hookers[i].x = -hookers[i].width;
+                hookers[i].lane = dockChosen;
+                hookers[i].y = (hookers[i].lane * 80) + 150;
+                hookers[i].free = true;
+                loadingDocks[dockChosen].object = hookers[i];
+                loadingDocks[dockChosen].isLoading = true;
+                loadingDocks[dockChosen].timeBefore = 20;
+                break;
+            }
+        }
+    }
+}
+
+
+for (var z = 0; z < 2  ; z++) {
+    for (var i = 0; i < 5; i++) {
+        console.log(loadingDocks[z].toLoad[i]);
+    }
+}
+
+//setInterval(function() { discarrego(3); }, 20);
+</script>
+</body>
