@@ -106,29 +106,35 @@ function loadingDock()
     }
 }
 
-function entity(sprite, x, y, width, height)
+class entity
 {
-    this.sprite = sprite;
-    this.width = width;
-    this.height = height;
-    this.frame = 0;
-    this.x = x;
-    this.y = y;
-    this.lane = 0;
-    //TODO: CHANGE THE NAME FREE TO SOMETHING THAT MAKES SENSE!!!!!!!
-    this.free = false;
-    this.copSmokePixels = 18;
+    constructor(sprite, x, y, width, height)
+    {
+        this.sprite = sprite;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.frame = 0;
+        this.x = x;
+        this.y = y;
+        this.lane = 0;
+        //TODO: CHANGE THE NAME FREE TO SOMETHING THAT MAKES SENSE!!!!!!!
+        this.free = false;
+        this.copSmokePixels = 18;
+    }
+
     //the hitbox must be a little smaller than the actual width of the truck cause of the smoke and transparent spaces and shit
     //
-    this.draw = function()
+    draw ()
     {
         content.drawImage(this.sprite, 0, this.frame * this.height, this.width, this.height, this.x, this.y, this.width, this.height);
     }
-    this.switchFrame = function ()
+    switchFrame  ()
     {
         this.frame = (this.frame + 1) % this.numberOfFrames;
     }
-    this.move = function()
+    move ()
     {
         this.x += vel;
         if(this.x >= canvas.width)
@@ -136,8 +142,7 @@ function entity(sprite, x, y, width, height)
             this.free = false;
         }
     }
-    //this functions tests if the object isn't inside the truck, not if the truck isn't inside the object
-    this.collision = function()
+    collision ()
     {
         // verifica colisão com caminhão
         if (this.x >= truck.x + 9.92 && this.x <= truck.x + truck.width - 79.92 && this.lane == truck.lane)
@@ -147,7 +152,7 @@ function entity(sprite, x, y, width, height)
         if (this.x + this.width - this.copSmokePixels >= truck.x + 9.92 && this.x + this.width - this.copSmokePixels <= truck.x + truck.width - 79.92 && this.lane == truck.lane)
             this.free = false;
     }
-    this.tick = function()
+    tick ()
     {
         this.move(); this.collision(); this.draw();
     }
